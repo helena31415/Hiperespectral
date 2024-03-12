@@ -1,0 +1,17 @@
+„Atmospheric transmittance and absorption correction and sensor calibration
+of hyperspectral imagery are more difficult than they are for multispectral
+imagery because of hyperspectral imagery’s substantially higher spectral
+resolution. The specific reasons for this extra difficulty include the following:
+• Hyperspectral sensor bands coinciding with narrow atmospheric
+absorption features or the edges of broader spectral features will be
+affected by the atmosphere differently than the neighboring bands
+• The band locations in imaging spectrometer systems are prone to small
+wavelength shifts under different operating conditions, particularly in
+airborne sensors
+• Many analysis algorithms for hyperspectral data require precise
+absorption band-depth measurements exactly at the wavelength of
+maximum absorption
+• From the computational standpoint alone, the calibration problem is much
+greater for hyperspectral systems.” Schowengerdt (2007)
+
+https://30405300.rocketcdn.me/wp-content/uploads/2023/07/Preprocessing_MOOC_HYPERedu_document-2.pdf
