@@ -1,3 +1,12 @@
+installation
+
+$ mamba create --name enpt enpt
+$ mamba activate enpt
+
+/////////////////////////////////////////////////////////////////////////////////
+
+execute
+
 from enpt.execution.controller import EnPT_Controller
 
 config_minimal = dict(
