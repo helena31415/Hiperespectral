@@ -1,0 +1,16 @@
+Level 2A Processor (Atmospheric Correction
+Water) ATBD
+
+The algorithm (i.e. o algoritimo que converte imagens L1C em L2A Atmospheric Correction Water - in the moment of ordering the data, the user can choose between land/water applications) converts the top-of-atmosphere radiances (level L1B or L1C) 
+into underwater reflectances in the visible spectral interval. 
+
+Underwater reflectances simply are the ratios of upward to downward fluxes right beneath the water surface. 
+
+Normalized water reflectance is Upwelling Radiance divided by downwelling irradiance times pi for both nadir sun and nadir view angles.
+
+The L1B data can be processed before orthorectification and in this case VNIR and SWIR data must be co-registered to the VNIR spectrometer. //// EnPT should do this
+
+Orthorectified data (L1C) can also be processed and, in this case, the nearest neighbor method should be applied for image resampling.    //// this as well
+
+Results of L2A Land processor (e.g. cloud mask and preliminary water mask) are also used as input to the L2A (water) processor. 
+
