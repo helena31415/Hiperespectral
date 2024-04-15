@@ -1,0 +1,11 @@
+**** Spectral Libraries ****
+
+Create a new Spectral Profile field based on a text field called “Reflectance” 
+Open the field calculator field calculator icon
+Use the spectralMath function to calculate reflectances from the ASD radiances measured from field spectra and its corresponding white reference.
+
+spectralMath("<profile field 1>", ..., "<profile field n>",
+'<python code>', '<output format>')
+   
+spectralMath("Spectrum",  "Reference",
+'y = y1 / y2', 'text')
