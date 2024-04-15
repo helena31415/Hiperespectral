@@ -1,0 +1,14 @@
+EnMAP is a pushbroom-type imaging
+spectrometer with a prism-based dualspectrometer instrument design covering the
+420–2450-nm spectral range: a VNIR system(420–1000 nm) and a SWIR system (900–2450nm). 
+The threshold requirements for the Signalto-noise ratio (SNR) are
+• VNIR >500:1 (@495 nm)
+• SWIR > 150:1 (@2200 nm)
+and the spectral calibration uncertainty
+• VNIR 0.5 nm
+• SWIR 1 nm
+The required radiometric calibration accuracy is 5
+% and co-registration VNIR-SWIR < 20 % of a pixel.
+
+
+https://enmap.git-pages.gfz-potsdam.de/GFZ_Tools_EnMAP_BOX/EnPT/doc/tutorial.html
