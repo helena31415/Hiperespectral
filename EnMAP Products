@@ -1,7 +1,7 @@
 Level 2A Processor (Atmospheric Correction
 Water) ATBD
 
-The algorithm (i.e. o algoritimo que converte imagens L1C em L2A Atmospheric Correction Water - in the moment of ordering the data, the user can choose between land/water applications) converts the top-of-atmosphere radiances (level L1B or L1C) 
+The algorithm (i.e. o algoritimo que converte imagens L1C em L2A Water wich the user can choose in the moment of ordering the data- land/water applications) converts the top-of-atmosphere radiances (level L1B or L1C) 
 into underwater reflectances in the visible spectral interval. 
 
 Underwater reflectances simply are the ratios of upward to downward fluxes right beneath the water surface. 
