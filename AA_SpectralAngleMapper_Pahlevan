@@ -1,0 +1,165 @@
+import pandas as pd
+
+# Carregar o arquivo CSV
+file2 = '/content/owtsPahlevan.csv'
+owts = pd.read_csv(file2)
+# Remover colunas que começam com 'Unnamed'
+owts = owts.loc[:, ~owts.columns.str.contains('^Unnamed')]
+owts = owts.replace(',', '.', regex=True).astype(float)
+owts
+
+poligonos = pd.read_excel('/content/poligonos_filtrados24.xlsx')
+poligonos
+
+Agregar OWTs para Polígonos de 2024
+
+import pandas as pd
+
+
+# Supondo que o DataFrame filtered_poligonos já foi criado
+bandas_poligonos = poligonos['Bandas'].tolist() # lista de bandas EnMAP
+
+print(bandas_poligonos)
+# Função para encontrar o valor mais próximo
+def find_closest(value, options):
+    closest = min(options, key=lambda x: abs(x - value))
+    return closest
+
+# Adicione a coluna 'Banda Mais Proxima' ao owtsPahlevan
+owts['Banda Mais Proxima'] = owts['Bandas'].apply(lambda x: find_closest(x, bandas_poligonos)) # cria coluna,
+                                                                                                 # para uma serie composta pelos indexes da tabela,
+                                                                                                 # aplica um lambda tal que,
+                                                                                                 # lambda é o valor resultado da função 'find_closest' aplicado a:
+                                                                                                   # value = x = valor da serie de indexes e options = lista de bandas EnMAP
+owts
+
+
+# Agregue as bandas correspondentes às mesmas 'Banda Mais Proxima' por mediana
+owts = owts.groupby('Banda Mais Proxima').median() # agrupa por mediana -> necessariamente haverá então  o mesmo número de linhas que a tabela de polígonos (ENMAP)
+
+# Exiba o DataFrame agregado
+print("DataFrame owts Pahlevan:")
+print("Número de linhas:", owts.shape[0])
+print("Número de OWTs:", owts.shape[1])
+print('***********************************************************************')
+# Exiba o DataFrame agregado
+print("DataFrame poligonos 2022:")
+print("Número de linhas:", poligonos.shape[0])
+print("Número de polígonos:", poligonos.shape[1])
+
+# Exporta para um arquivo Excel (descomente se necessário)
+owts.to_excel('owts_Pahlevan_Agregadas.xlsx', index=True)
+print('Exportando owts tratadas como xlsx')
+
+
+import numpy as np
+import pandas as pd
+# Define the SAM computation function
+def compute_sam(target, reference):
+    """
+    Compute the Spectral Angle Mapper (SAM) between target and reference vectors.
+    """
+    termo = np.dot(target, reference) / (np.linalg.norm(target) * np.linalg.norm(reference))
+
+    sam_angle = np.arccos(termo) # RADIANOS
+
+    return sam_angle
+
+
+# Create arrays for OWTs and polygons
+owt_dicionario_de_arrays = {col: owts[col].to_numpy() for col in owts.columns if col != 'Bandas'} # ou seja, para todas as colunas da tabela 'owts' diferentes de 'Bandas' (i.e. os as prórpias OWTs),
+                                                                                                      # cria-se uma lista com esses valores e elas são guardadas em um dicionário
+poligono_dicionario_de_arrays = {col: poligonos[col].to_numpy() for col in poligonos.columns if col != 'Bandas'} # mesmo procedimento, em tese esses arrays devem ser do mesmo tamanho
+                                                                                                                                            # mas os dicionários, não, pois os números de OWTs e alvos podem variar.
+#print(owt22_dicionario_de_arrays)
+print(len(owt_dicionario_de_arrays))
+#print(poligono22_dicionario_de_arrays)
+print(len(poligono_dicionario_de_arrays))
+
+#print(poligono22_dicionario_de_arrays)
+# Verifica o tamanho das listas (ou arrays) dentro dos dicionários
+
+# Função para verificar o tamanho dos arrays em um dicionário
+def verificar_tamanhos(dicionario):
+    tamanhos = {chave: valor.size for chave, valor in dicionario.items()}
+    return tamanhos
+
+# Verificar tamanhos para o dicionário de OWTs
+#tamanhos_owt22 = verificar_tamanhos(owt22_dicionario_de_arrays)
+##print("Tamanhos dos arrays em owt22_dicionario_de_arrays:")
+#for chave, tamanho in tamanhos_owt22.items():
+    #print(f"{chave}: {tamanho}")
+
+# Verificar tamanhos para o dicionário de polígonos
+#tamanhos_poligono22 = verificar_tamanhos(poligono22_dicionario_de_arrays)
+#print("\nTamanhos dos arrays em poligono22_dicionario_de_arrays:")
+#for chave, tamanho in tamanhos_poligono22.items():
+    #print(f"{chave}: {tamanho}")
+
+
+
+import numpy as np
+new_column_names = ['mancha_preta', 'mancha_gamacho24', 'penhagaleao', 'marrom24', 'parqueDuque', 'cohab', 'camboinhas_BG', 'verde1', 'botafogo', 'SaoGoncaloNorte','fundao1','fundao2','fundao3','manchas24','centroBG','exterior']
+owt_arrays = owt_dicionario_de_arrays.copy()
+poligono22_arrays = poligono_dicionario_de_arrays.copy()
+
+num_polygons = len(new_column_names)
+num_pol2 = len(poligono22_arrays)
+num_owts = len(owt_arrays)
+sam_matrix = np.zeros((num_polygons, num_owts)) # cria matriz de 'zeros' naquelas dimensões: linhas=poligonos, colunas=owts
+
+
+print(f'Existem {num_owts} OWTs registradas e {num_pol2} alvos (polígonos) inseridos.')
+
+
+
+
+# COMPUTA O SAM
+for i, (polygon_name, polygon_array) in enumerate(poligono22_arrays.items()):
+    #print(f"Processando o polígono {i+1}/{len(poligono22_arrays)}: {polygon_name}")
+    #print(f"Tamanho do array do polígono '{polygon_name}': {len(polygon_array)}")
+    #print(f"Primeiros 5 elementos do array do polígono '{polygon_name}': {polygon_array[:5]}")
+
+    for j, (owt_name, owt_array) in enumerate(owt_arrays.items()):
+        #print(f"  Comparando com OWT {j+1}/{len(owt_arrays)}: {owt_name}")
+        #print(f"  Tamanho do array da OWT '{owt_name}': {len(owt_array)}")
+        #print(f"  Primeiros 5 elementos do array da OWT '{owt_name}': {owt_array[:5]}")
+
+        # Calcula o SAM
+        sam_angle = compute_sam(polygon_array, owt_array)
+        sam_matrix[i, j] = sam_angle
+
+        #print(f"  SAM calculado entre '{polygon_name}' e '{owt_name}': {sam_angle:.4f}")
+    #print("-" * 50)
+
+sam_df = pd.DataFrame(sam_matrix, columns=[f'OWT_{i+1}' for i in range(num_owts)], index=new_column_names) # nomeia as linhas e colunas do df de ângulos do SAM
+
+
+
+
+# Save the SAM matrix to an Excel file
+#import datetime
+#nome_arquivo = f'tabela2024_angulos_espectrais_{data_atual}.xlsx'
+#sam_df.to_excel(nome_arquivo)
+#print(f"Arquivo salvo como: {nome_arquivo}")
+
+
+sam_df
+
+# Identify the OWT with the minimum SAM angle for each polygon
+min_sam_indices = sam_df.idxmin(axis=1)
+min_sam_values = sam_df.min(axis=1)
+
+# Create a new DataFrame to store the results
+results_df = pd.DataFrame({
+    'Polígono': new_column_names,
+    'OWT_mais_próxima': min_sam_indices.values,
+    'Menor_ângulo_Radianos': min_sam_values.values
+})
+
+# Save the results to an Excel file
+results_df.to_excel('SAM_2024_7OWTs.xlsx', index=False)
+results_df
+
+#Agrupamento pré-plotagem
+
