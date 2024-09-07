@@ -1,0 +1,263 @@
+#OWTs
+
+import pandas as pd
+
+file2 = '/content/owtsSpyrakos.csv'
+owtSpyrakos = pd.read_csv(file2)
+
+owtSpyrakos.index = pd.to_numeric(owtSpyrakos.index)
+owtSpyrakos.to_csv('/content/owtsSpyrakos.csv', index=True)
+owtSpyrakos = owtSpyrakos.loc[:, ~owtSpyrakos.columns.str.contains('^Unnamed')]
+owtSpyrakos
+
+#owtSpyrakos['OWT_21'].plot()
+
+#POLÍGONOS
+
+
+# Load the CSV file
+poligonos = pd.read_csv('/content/reflectance_newNEW_polygons_2024.csv') ## direto do GEE --> Drive, sem necessidade de tratamento prévio no Excel
+poligonos = poligonos.drop(['.geo','system:index'],axis=1)
+colunas = poligonos.columns
+colunas_ordenadas = sorted([col for col in colunas if col.startswith('b')], key=lambda x: int(x[1:]))
+#colunas_ordenadas
+non_numeric_columns2 = [col for col in colunas if not col.startswith('b')]
+colunas_ordenadas.extend(non_numeric_columns2)
+poligonos = poligonos[colunas_ordenadas]
+poligonos_transpostos = poligonos.transpose()
+new_column_names = ['mancha_preta', 'mancha_gamacho24', 'penhagaleao',
+'marrom24', 'parqueDuque', 'cohab', 'camboinhas_BG', 'verde1', 'botafogo',
+'SaoGoncaloNorte','fundao1','fundao2','fundao3','manchas24','centroBG','exterior'] # copiei do código no GEE
+poligonos_transpostos.columns = new_column_names
+poligonos_transpostos = poligonos_transpostos.drop(index='polygon') # depois de inserir a lista de nomes dos poligonos nas colunas, posso deletar a linha de em que eles existiam (os nomes)
+poligonos_transpostos # resta trocar 'b1' pelo valor de comprimento de onda --> olhar METADADOS.xml
+poligonos_transpostos
+
+import xml.etree.ElementTree as ET
+
+def extract_wavelengths(xml_file):
+    # Parse the XML file
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    # List to store the waveLength values
+    wavelengths = []
+
+    # Iterate over each bandID element
+    for band in root.findall(".//bandID"):
+        # Extract the waveLength value
+        wavelength_element = band.find("waveLength")
+
+        # Check if the waveLength element exists
+        if wavelength_element is not None:
+            wavelength = float(wavelength_element.text)
+            wavelengths.append(wavelength)
+        else:
+            continue
+
+    return wavelengths
+
+# Specify the path to your XML file
+xml_file_path = '/content/metadados2024.XML'
+
+# Extract wavelengths
+wavelengths = extract_wavelengths(xml_file_path)
+
+# Print the list of all encountered wavelengths
+print("List of encountered wavelengths:")
+print('lista "wavelenghts": ',wavelengths)
+print('numero de bandas:',len(wavelengths))
+
+#CRIANDO MAPEAMENTO
+nomes_das_bandas = [f'b{i+1}' for i in range(len(wavelengths))]
+wavelength_mapping = dict(zip(nomes_das_bandas, wavelengths))
+wavelength_mapping
+poligonos_transpostos.index = poligonos_transpostos.index.map(wavelength_mapping)
+#adicionar 'Bandas' ao nome da coluna de Bandas
+poligonos_transpostos = poligonos_transpostos.rename_axis('Bandas').reset_index()
+poligonos_transpostos = poligonos_transpostos.set_index('Bandas')
+
+
+poligonos_transpostos
+
+poligonos_filtrados = poligonos_transpostos[poligonos_transpostos.index <= 800]
+poligonos_filtrados
+excel_path = '/content/poligonos_filtrados24.xlsx'
+poligonos_filtrados.to_excel(excel_path, index=True)
+
+print(f'O arquivo Excel foi salvo em: {excel_path}')
+
+poligonos_filtrados
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+#Modificando OWTs -- Agregação por valor mais próximo e mediana
+
+import pandas as pd
+
+# Supondo que o DataFrame filtered_poligonos já foi criado
+bandas_poligonos_filtered = poligonos_filtrados.index.tolist()  # lista de bandas EnMAP
+
+# Função para encontrar o valor mais próximo
+def find_closest(value, options):
+    closest = min(options, key=lambda x: abs(x - value))
+    return closest
+
+# Adicione a coluna 'Banda Mais Proxima' ao owtSpyrakos
+owtSpyrakos['Banda Mais Proxima'] = owtSpyrakos['Bandas'].apply(lambda x: find_closest(x, bandas_poligonos_filtered))
+
+# Agregue as bandas correspondentes às mesmas 'Banda Mais Proxima' por mediana
+owtSpyrakos = owtSpyrakos.groupby('Banda Mais Proxima').median()
+
+# Resetando o índice para remover 'Bandas' da indexação
+owtSpyrakos = owtSpyrakos.reset_index()
+
+# Agora, a coluna 'Bandas' será removida se existir
+# Se 'Bandas' estiver presente no DataFrame, remova-a
+if 'Bandas' in owtSpyrakos.columns:
+    owtSpyrakos = owtSpyrakos.drop(columns=['Bandas'])
+
+# Exiba o DataFrame modificado
+print("DataFrame owts Spyrakos:")
+print("Número de linhas:", owtSpyrakos.shape[0])
+print("Número de OWTs:", owtSpyrakos.shape[1])
+print('**************************************************************************************************************************')
+print("DataFrame poligonos 2024:")
+print("Número de linhas:", poligonos_filtrados.shape[0])
+print("Número de polígonos:", poligonos_filtrados.shape[1])
+
+# Exporta para um arquivo Excel (descomente se necessário)
+owtSpyrakos.to_excel('owts_Spyrakos_Agregadas2024.xlsx', index=True)
+
+owtSpyrakos
+
+
+import numpy as np
+import pandas as pd
+# Define the SAM computation function
+def compute_sam(target, reference):
+    """
+    Compute the Spectral Angle Mapper (SAM) between target and reference vectors.
+    """
+    termo = np.dot(target, reference) / (np.linalg.norm(target) * np.linalg.norm(reference))
+
+    sam_angle = np.arccos(termo) # RADIANOS
+
+    return sam_angle
+
+
+# Create arrays for OWTs and polygons
+owt_dicionario_de_arrays = {col: owtSpyrakos[col].to_numpy() for col in owtSpyrakos.columns if col != 'Bandas'} # ou seja, para todas as colunas da tabela 'owts' diferentes de 'Bandas' (i.e. os as prórpias OWTs),
+                                                                                                      # cria-se uma lista com esses valores e elas são guardadas em um dicionário
+poligono_dicionario_de_arrays = {col: poligonos_filtrados[col].to_numpy() for col in poligonos_filtrados.columns if col != 'Bandas'} # mesmo procedimento, em tese esses arrays devem ser do mesmo tamanho
+                                                                                                                                            # mas os dicionários, não, pois os números de OWTs e alvos podem variar.
+#print(owt22_dicionario_de_arrays)
+print(len(owt_dicionario_de_arrays))
+#print(poligono22_dicionario_de_arrays)
+print(len(poligono_dicionario_de_arrays))
+
+#print(poligono22_dicionario_de_arrays)
+# Verifica o tamanho das listas (ou arrays) dentro dos dicionários
+
+# Função para verificar o tamanho dos arrays em um dicionário
+def verificar_tamanhos(dicionario):
+    tamanhos = {chave: valor.size for chave, valor in dicionario.items()}
+    return tamanhos
+
+# Verificar tamanhos para o dicionário de OWTs
+#tamanhos_owt22 = verificar_tamanhos(owt22_dicionario_de_arrays)
+##print("Tamanhos dos arrays em owt22_dicionario_de_arrays:")
+#for chave, tamanho in tamanhos_owt22.items():
+    #print(f"{chave}: {tamanho}")
+
+# Verificar tamanhos para o dicionário de polígonos
+#tamanhos_poligono22 = verificar_tamanhos(poligono22_dicionario_de_arrays)
+#print("\nTamanhos dos arrays em poligono22_dicionario_de_arrays:")
+#for chave, tamanho in tamanhos_poligono22.items():
+    #print(f"{chave}: {tamanho}")
+
+
+
+import numpy as np
+
+owt_arrays = owt_dicionario_de_arrays.copy()
+poligono_arrays = poligono_dicionario_de_arrays.copy()
+
+num_polygons = len(new_column_names)
+num_pol2 = len(poligono_arrays)
+num_owts = len(owt_arrays)
+sam_matrix = np.zeros((num_polygons, num_owts)) # cria matriz de 'zeros' naquelas dimensões: linhas=poligonos, colunas=owts
+
+
+print(f'Existem {num_owts} OWTs registradas e {num_pol2} alvos (polígonos) inseridos.')
+
+
+
+# COMPUTA O SAM
+for i, (polygon_name, polygon_array) in enumerate(poligono_arrays.items()):
+    #print(f"Processando o polígono {i+1}/{len(poligono22_arrays)}: {polygon_name}")
+    #print(f"Tamanho do array do polígono '{polygon_name}': {len(polygon_array)}")
+    #print(f"Primeiros 5 elementos do array do polígono '{polygon_name}': {polygon_array[:5]}")
+
+    for j, (owt_name, owt_array) in enumerate(owt_arrays.items()):
+        #print(f"  Comparando com OWT {j+1}/{len(owt_arrays)}: {owt_name}")
+        #print(f"  Tamanho do array da OWT '{owt_name}': {len(owt_array)}")
+        #print(f"  Primeiros 5 elementos do array da OWT '{owt_name}': {owt_array[:5]}")
+
+        # Calcula o SAM
+        sam_angle = compute_sam(polygon_array, owt_array)
+        sam_matrix[i, j] = sam_angle
+
+        #print(f"  SAM calculado entre '{polygon_name}' e '{owt_name}': {sam_angle:.4f}")
+    #print("-" * 50)
+
+sam_df = pd.DataFrame(sam_matrix, columns=[f'OWT_{i+1}' for i in range(num_owts)], index=new_column_names) # nomeia as linhas e colunas do df de ângulos do SAM
+
+
+
+
+# Save the SAM matrix to an Excel file
+#import datetime
+#nome_arquivo = f'tabela2024_angulos_espectrais_{data_atual}.xlsx'
+#sam_df.to_excel(nome_arquivo)
+#print(f"Arquivo salvo como: {nome_arquivo}")
+
+
+sam_df
+
+# Identify the OWT with the minimum SAM angle for each polygon
+min_sam_indices = sam_df.idxmin(axis=1)
+min_sam_values = sam_df.min(axis=1)
+
+# Create a new DataFrame to store the results
+results_df = pd.DataFrame({
+    'Polígono': new_column_names,
+    'OWT_mais_próxima': min_sam_indices.values,
+    'Menor_ângulo_Radianos': min_sam_values.values
+})
+
+# Save the results to an Excel file
+results_df.to_excel('SAM_2024_21OWTs.xlsx', index=False)
+results_df
+
+
+
+#Agrupamento pré-plotagem
+
+import pandas as pd
+
+# Seu DataFrame deve estar carregado como results_df
+# results_df = pd.read_csv('seu_arquivo.csv')  # Exemplo de carregamento, se necessário
+
+# Cria o dicionário agrupando os polígonos por OWT
+owt_dict = results_df.groupby('OWT_mais_próxima')['Polígono'].apply(list).to_dict()
+
+for owt, polygons in owt_dict.items():
+    print(f"{owt}:")
+    for polygon in polygons:
+        print(f"  - {polygon}")
+    print()
+
+
+owtSpyrakos , poligonos_filtrados
